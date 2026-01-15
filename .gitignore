@@ -1,0 +1,16 @@
+# Zig build artifacts
+zig-out/
+zig-cache/
+
+# If you use the Zig package manager (0.11.0+)
+.zig-cache/
+
+# Executables and shared libraries (standard names)
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
