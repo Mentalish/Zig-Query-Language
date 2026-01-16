@@ -10,15 +10,16 @@ pub fn main() !void {
 
     var stdout_writer = std.fs.File.stdout().writer(&out_buffer);
     const stdout: *std.io.Writer = &stdout_writer.interface;
+
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const base_allocator = gpa.allocator();
+    defer _ = gpa.deinit();
+
     while (true) {
         try stdout.print("Enter the Query: \n", .{});
         try stdout.flush();
 
         const buffer = try stdin.takeDelimiter('\n') orelse "";
-
-        var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-        const base_allocator = gpa.allocator();
-        defer _ = gpa.deinit();
 
         var arena_allocator = std.heap.ArenaAllocator.init(base_allocator);
         defer arena_allocator.deinit();
