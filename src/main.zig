@@ -7,10 +7,10 @@ pub fn main() !void {
 
     var stdin_reader = std.fs.File.stdin().reader(&in_buffer);
     const stdin: *std.io.Reader = &stdin_reader.interface;
-    
+
     var stdout_writer = std.fs.File.stdout().writer(&out_buffer);
     const stdout: *std.io.Writer = &stdout_writer.interface;
-    while (true) { 
+    while (true) {
         try stdout.print("Enter the Query: \n", .{});
         try stdout.flush();
 
@@ -28,7 +28,7 @@ pub fn main() !void {
         for (tokens) |token| {
             try stdout.print("{s} ", .{token});
         }
-        
+
         try stdout.print("\n", .{});
         try stdout.flush();
     }
