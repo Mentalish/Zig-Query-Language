@@ -11,43 +11,43 @@ const StackItem = union(enum) {
     string: ?[]const u8,
 };
 
-pub fn createParseTree(buffer: [][]const u8, state_tree: []State, allocator: std.mem.Allocator) !*ParseTreeNode {
-    var node: *ParseTreeNode = undefined;
-    var token_stack = std.BoundedArray(StackItem, buffer.len);
-
-    var i = 0;
-    query: while (i < buffer.len) {
-        if (std.ascii.eqlIgnoreCase(buffer[i], "SELECT")) {
-            token_stack.append(.{ .string = .{buffer[i]} });
-            i += 1;
-
-            while (std.ascii.isAlphabetic(buffer[i])) {
-                token_stack.append(.{ .string = .{buffer[i]} });
-                i += 1;
-                break :query;
-            }
-        } else if (std.ascii.eqlIgnoreCase(buffer[i], "FROM")) {
-            token_stack.append(.{ .string = .{buffer[i]} });
-            i += 1;
-            break :query;
-        } else if (std.ascii.eqlIgnoreCase(buffer[i], "WHERE")) {
-            //grab operators
-        } else {
-            unreachable; //bad operator
-        }
+pub fn create_parse_tree(buffer: [][]const u8, state_tree: []State, allocator: std.mem.Allocator) !*ParseTreeNode {
+    var node_stack: std.ArrayList(StackItem) = {};
+    node_stack.append(try create_node(buffer[0], allocator));
+    var i: usize = 1;
+    var current_state: usize = 0;
+    while (i < buffer.len) {
+        node_stack.append(create_node(buffer[i], allocator));
+        var opcode: []const u8 = try state_tree.state[current_state].get(peak(node_stack)) orelse break;
+        //do actions based on code
+        
+        //push next thing to the stack
+        i += 1;
     }
+}
 
+fn create_node(operator: []const u8, allocator: std.mem.Allocator) !*ParseTreeNode {
+    var node: *ParseTreeNode = try allocator.create(ParseTreeNode);
+    node.operator = operator;
     return node;
 }
 
-const StateTree = struct { state: []State, num_states: usize };
+fn peak(stack: std.ArrayList(StackItem)) ?[]const u8 {
+    if (stack.len != 0) {
+        return stack[stack.len - 1].operator;
+    }
+}
+
+const StateDictionary = struct { state: []State, num_states: usize };
 
 const State = struct { sub_states: std.StringHashMap([]const u8) };
 
-pub fn initStateTree(allocator: std.mem.Allocator) StateTree {
+pub fn init_state_dictionary(allocator: std.mem.Allocator) !*StateDictionary {
     //init state tree
-    var state_tree: StateTree = allocator.alloc(StateTree, 1);
+    var state_tree: StateDictionary = allocator.alloc(StateDictionary, 1);
     state_tree.num_states = 4;
+    
+    state_tree.state = allocator.alloc(State, state_tree.num_states);
 
     //init substates
     for (state_tree.state) |state| {
@@ -58,4 +58,20 @@ pub fn initStateTree(allocator: std.mem.Allocator) StateTree {
     try state_tree.state[0].stubstates.put("SELECT", "s3");
 
     return state_tree;
+}
+
+pub fn free_parse_tree(root: *ParseTreeNode, allocator: std.mem.Allocator) void{
+    for (root.children) |child|{
+        free_parse_tree(child, allocator);
+    }
+
+    allocator.destroy(root);
+}
+
+pub fn free_state_dictionary(state_dictionary: *StateDictionary, allocator: std.mem.Allocator) void {
+    for (state_dictionary.state) |state| {
+        state.sub_states.deinit();
+    }
+
+    allocator.destroy(state_dictionary);
 }

@@ -15,6 +15,8 @@ pub fn main() !void {
     const base_allocator = gpa.allocator();
     defer _ = gpa.deinit();
 
+    const state_dictionary = zql.parse.init_state_dictionary(base_allocator);
+
     while (true) {
         try stdout.print("Enter the Query: \n", .{});
         try stdout.flush();
@@ -24,13 +26,21 @@ pub fn main() !void {
         var arena_allocator = std.heap.ArenaAllocator.init(base_allocator);
         defer arena_allocator.deinit();
 
-        const tokens: [][]const u8 = zql.lexer.cmd_lexer(buffer, arena_allocator.allocator()) catch &[_][]const u8{};
-
+        const tokens: [][]const u8 = zql.lexer.cmd_lexer(buffer, arena_allocator.allocator()) catch &[_][]const u8{} orelse continue;
+        const query_parse_tree: zql.parse.ParseTreeNode = zql.parse.create_parse_tree(tokens, state_dictionary, base_allocator) catch {
+            try stdout.print("Invalid Query\n", .{});
+            try stdout.flush();
+            continue;
+        };
         for (tokens) |token| {
             try stdout.print("{s} ", .{token});
         }
 
         try stdout.print("\n", .{});
         try stdout.flush();
+
+        //dont forget to free the tree
     }
+
+    //dont forget to free the dictionary
 }
