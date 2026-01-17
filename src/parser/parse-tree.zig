@@ -45,7 +45,7 @@ const State = struct { sub_states: std.StringHashMap([]const u8) };
 pub fn init_state_dictionary(allocator: std.mem.Allocator) !*StateDictionary {
     //init state tree
     var state_tree: StateDictionary = allocator.alloc(StateDictionary, 1);
-    state_tree.num_states = 4;
+    state_tree.num_states = 5;
     
     state_tree.state = allocator.alloc(State, state_tree.num_states);
 
@@ -55,7 +55,12 @@ pub fn init_state_dictionary(allocator: std.mem.Allocator) !*StateDictionary {
     }
 
     //populate state tree
-    try state_tree.state[0].stubstates.put("SELECT", "s3");
+    try state_tree.state[0].stubstates.put("SELECT", "s2");
+    try state_tree.state[1].stubstates.put("<TABLE>", "s3");
+    try state_tree.state[2].stubstates.put("FROM", "s4");
+    try state_tree.state[3].stubstates.put("<NUM>", "s5");
+    try state_tree.state[4].stubstates.put("<OPERATOR>", "s4");
+
 
     return state_tree;
 }
