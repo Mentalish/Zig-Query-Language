@@ -32,6 +32,7 @@ const State = struct { sub_states: std.StringHashMap([]const u8) };
 
 pub fn create_parse_tree(tokens: []typ.Token, allocator: std.mem.Allocator) !*ParseTreeNode {
     var node_stack: std.ArrayList(*ParseTreeNode) = {};
+
     node_stack.append(try create_node(tokens[0], allocator));
     var i: usize = 1;
     var j: usize = 0;
@@ -45,17 +46,23 @@ pub fn create_parse_tree(tokens: []typ.Token, allocator: std.mem.Allocator) !*Pa
         current_state = action.next_state;
         switch (opcode) {
             .push => {
-                while (i < action_count) : (j += 1) {
+                while (i < action_count) : (i += 1) {
                     node_stack.append(create_node(tokens[i], allocator));
-                    i += 1;
                 }
-                j = 0;
             },
             .reduce => {
-                while (i < action_count) : (j += 1) {}
+                var popped_nodes: []*ParseTreeNode = {};
+                while (j < action_count) : (j += 1) {
+                    popped_nodes[j] = node_stack.pop();
+                }
                 j = 0;
+
+                const parent_index: usize = popped_nodes.len / 2;
+
+                reduce_tree(popped_nodes[parent_index], popped_nodes[0..parent_index], popped_nodes[(parent_index + 1)..popped_nodes.len]);
+                node_stack.appendAssumeCapacity(popped_nodes[parent_index]);
             },
-            .eof => {},
+            .eof => break,
             .@"error" => return error.Invalid_Token,
             else => unreachable,
         }
@@ -75,9 +82,7 @@ fn get_action_code(stack: std.ArrayList(ParseTreeNode)) ?ActionCode {
     }
 }
 
-fn reduce_tree() !*ParseTreeNode{
-    
-}
+fn reduce_tree(parent: *ParseTreeNode, left_children: []*ParseTreeNode, right_children: []*ParseTreeNode) !void {}
 
 const state_dictionary = [_]?[]const SubState{
     state_0: {
