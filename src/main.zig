@@ -25,7 +25,7 @@ pub fn main() !void {
         defer arena_allocator.deinit();
 
         const tokens: []zql.lexer.Token = zql.lexer.cmd_lexer(buffer, arena_allocator.allocator()) catch continue;
-        const query_parse_tree: zql.parse.ParseTreeNode = zql.parse.create_parse_tree(tokens, state_dictionary, base_allocator) catch {
+        const query_parse_tree: zql.parse.ParseTreeNode = zql.parse.create_parse_tree(tokens, arena_allocator.allocator()) catch {
             try stdout.print("Invalid Query\n", .{});
             try stdout.flush();
             continue;
@@ -37,7 +37,6 @@ pub fn main() !void {
         try stdout.print("\n", .{});
         try stdout.flush();
 
-        //dont forget to free the tree
     }
 
     //dont forget to free the dictionary

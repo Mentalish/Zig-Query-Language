@@ -5,7 +5,7 @@ pub const ParseTreeNode = struct {
     operator: []const u8,
     type_code: typ.TokenType,
     parent: ?*ParseTreeNode = null,
-    children: ?*[]ParseTreeNode = null,
+    children: ?[]*ParseTreeNode = &{},
 };
 
 const StackItem = union(enum) {
@@ -31,7 +31,7 @@ const StateDictionary = struct { state: []State, num_states: usize };
 const State = struct { sub_states: std.StringHashMap([]const u8) };
 
 pub fn create_parse_tree(tokens: []typ.Token, allocator: std.mem.Allocator) !*ParseTreeNode {
-    var node_stack: std.ArrayList(ParseTreeNode) = {};
+    var node_stack: std.ArrayList(*ParseTreeNode) = {};
     node_stack.append(try create_node(tokens[0], allocator));
     var i: usize = 1;
     var j: usize = 0;
@@ -75,12 +75,8 @@ fn get_action_code(stack: std.ArrayList(ParseTreeNode)) ?ActionCode {
     }
 }
 
-pub fn free_parse_tree(root: *ParseTreeNode, allocator: std.mem.Allocator) void {
-    for (root.children) |child| {
-        free_parse_tree(child, allocator);
-    }
-
-    allocator.destroy(root);
+fn reduce_tree() !*ParseTreeNode{
+    
 }
 
 const state_dictionary = [_]?[]const SubState{
