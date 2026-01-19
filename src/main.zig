@@ -15,8 +15,6 @@ pub fn main() !void {
     const base_allocator = gpa.allocator();
     defer _ = gpa.deinit();
 
-    const state_dictionary = zql.parse.init_state_dictionary(base_allocator);
-
     while (true) {
         try stdout.print("Enter the Query: \n", .{});
         try stdout.flush();

@@ -1,6 +1,7 @@
 const std = @import("std");
+const typ = @import("lexer.zig");
 
-const ParseTreeNode = struct {
+pub const ParseTreeNode = struct {
     operator: []const u8,
     parent: ?*ParseTreeNode = null,
     children: ?*[]ParseTreeNode = null,
@@ -11,23 +12,22 @@ const StackItem = union(enum) {
     string: ?[]const u8,
 };
 
-const SubState = struct{
+pub const SubState = struct {
     next_state: usize,
-    action: ActionCode, 
+    action: ActionCode,
     action_count: usize,
 };
 
-const ActionCode = enum 
-{
-    REDUCE,
-    PUSH,
-    EOF,
+const ActionCode = enum {
+    reduce,
+    push,
+    eof,
+    @"error",
 };
 
 const StateDictionary = struct { state: []State, num_states: usize };
 
 const State = struct { sub_states: std.StringHashMap([]const u8) };
-
 
 pub fn create_parse_tree(buffer: [][]const u8, state_tree: []State, allocator: std.mem.Allocator) !*ParseTreeNode {
     var node_stack: std.ArrayList(StackItem) = {};
@@ -37,7 +37,7 @@ pub fn create_parse_tree(buffer: [][]const u8, state_tree: []State, allocator: s
     while (i < buffer.len) {
         var opcode: ActionCode = try state_tree.state[current_state].get(peak(node_stack)) orelse break;
         //do actions based on code
-        //push next thing to the stack 
+        //push next thing to the stack
         node_stack.append(create_node(buffer[i], allocator));
         i += 1;
     }
@@ -55,42 +55,54 @@ fn peak(stack: std.ArrayList(StackItem)) ?[]const u8 {
     }
 }
 
-pub fn init_state_dictionary(allocator: std.mem.Allocator) !*StateDictionary {
-    //init state tree
-    var state_tree: StateDictionary = allocator.alloc(StateDictionary, 1);
-    state_tree.num_states = 5;
-    
-    state_tree.state = allocator.alloc(State, state_tree.num_states);
+const state_dictionary = [_]?[]const SubState{
+    state_0: {
+        var tmp_row = [_]SubState{.{ .next_state = 999, .action = ActionCode.@"error", .action_count = 0 }} **
+            @typeInfo(typ.TokenType).@"enum".fields.len;
+        //put fields here
+        tmp_row[@intFromEnum(typ.TokenType.command)] = .{ .next_state = 1, .action = ActionCode.push, .action_count = 1 }; //select
+        const final = tmp_row;
+        break :state_0 &final;
+    },
+    state_1: {
+        var tmp_row = [_]SubState{.{ .next_state = 999, .action = ActionCode.@"error", .action_count = 0 }} **
+            @typeInfo(typ.TokenType).@"enum".fields.len;
+        //put fields here
+        tmp_row[@intFromEnum(typ.TokenType.name)] = .{ .next_state = 2, .action = ActionCode.push, .action_count = 1 };
+        const final = tmp_row;
+        break :state_1 &final;
+    },
+    state_2: {
+        var tmp_row = [_]SubState{.{ .next_state = 999, .action = ActionCode.@"error", .action_count = 0 }} **
+            @typeInfo(typ.TokenType).@"enum".fields.len;
+        //put fields here
+        tmp_row[@intFromEnum(typ.TokenType.command)] = .{ .next_state = 3, .action = ActionCode.push, .action_count = 1 }; //from
+        tmp_row[@intFromEnum(typ.TokenType.numerical)] = .{ .next_state = 3, .action = ActionCode.push, .action_count = 1 };
+        const final = tmp_row;
+        break :state_2 &final;
+    },
+    state_3: {
+        var tmp_row = [_]SubState{.{ .next_state = 999, .action = ActionCode.@"error", .action_count = 0 }} **
+            @typeInfo(typ.TokenType).@"enum".fields.len;
+        //put fields here
+        tmp_row[@intFromEnum(typ.TokenType.command)] = .{ .next_state = 1, .action = ActionCode.push, .action_count = 1 };
+        const final = tmp_row;
+        break :state_3 &final;
+    },
+    state_4: {
+        var tmp_row = [_]SubState{.{ .next_state = 999, .action = ActionCode.@"error", .action_count = 0 }} **
+            @typeInfo(typ.TokenType).@"enum".fields.len;
+        //put fields here
+        tmp_row[@intFromEnum(typ.TokenType.command)] = .{ .next_state = 1, .action = ActionCode.push, .action_count = 1 };
+        const final = tmp_row;
+        break :state_4 &final;
+    },
+};
 
-    //init substates
-    for (state_tree.state) |state| {
-        state.sub_states = std.StringHashMap(SubState).init(allocator);
-    }
-
-    //populate state tree
-    try state_tree.state[0].stubstates.put("SELECT", .{.next_state = 1, .action = ActionCode.PUSH, .action_count = 1});
-    try state_tree.state[1].stubstates.put("<TABLE>", .{.next_state = 2, .action = ActionCode.PUSH, .action_count = 1}); 
-    try state_tree.state[2].stubstates.put("FROM", .{.next_state = 3, .action = ActionCode.PUSH, .action_count = 1});
-    try state_tree.state[2].stubstates.put("<NUM>", .{.next_state = 3, .action = ActionCode.REDUCE, .action_count = 3});
-    try state_tree.state[3].stubstates.put("<NUM>", .{.next_state = 4, .action = ActionCode.PUSH, .action_count = 1});
-    try state_tree.state[4].stubstates.put("<OPERATOR>", .{.next_state = 0, .action = ActionCode.PUSH, .action_count = 1});
-
-
-    return state_tree;
-}
-
-pub fn free_parse_tree(root: *ParseTreeNode, allocator: std.mem.Allocator) void{
-    for (root.children) |child|{
+pub fn free_parse_tree(root: *ParseTreeNode, allocator: std.mem.Allocator) void {
+    for (root.children) |child| {
         free_parse_tree(child, allocator);
     }
 
     allocator.destroy(root);
-}
-
-pub fn free_state_dictionary(state_dictionary: *StateDictionary, allocator: std.mem.Allocator) void {
-    for (state_dictionary.state) |state| {
-        state.sub_states.deinit();
-    }
-
-    allocator.destroy(state_dictionary);
 }
