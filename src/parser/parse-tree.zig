@@ -69,7 +69,7 @@ pub fn create_parse_tree(tokens: []typ.Token, allocator: std.mem.Allocator) !*Pa
     }
 
     //reduce all
-    
+
     return node_stack.items[0];
 }
 
@@ -105,6 +105,7 @@ const state_dictionary = [_][]const SubState{
             @typeInfo(typ.TokenType).@"enum".fields.len;
         //put fields here
         tmp_row[@intFromEnum(typ.TokenType.command)] = .{ .next_state = 1, .action = ActionCode.push, .action_count = 1 }; //select
+        tmp_row[@intFromEnum(typ.TokenType.eof)] = .{ .next_state = 0, .action = ActionCode.eof, .action_count = 0 }; //select
         const final = tmp_row;
         break :state_0 &final;
     },

@@ -21,6 +21,12 @@ pub fn cmd_lexer(buffer: []const u8, allocator: std.mem.Allocator) ![]Token {
     var curr_token: std.ArrayList(u8) = .empty;
 
     for (buffer) |char| {
+        if (char == ';') {
+            try curr_token.append(allocator, char);
+            const token_text = try curr_token.toOwnedSlice(allocator);
+            try tokens.append(allocator, .{ .token = token_text, .type = get_type(token_text) });
+            break;
+        }
         if (char != ' ' and char != '\n') {
             try curr_token.append(allocator, char);
         } else {

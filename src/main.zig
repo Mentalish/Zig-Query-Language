@@ -31,7 +31,7 @@ pub fn main() !void {
             continue;
         };
         for (tokens) |token| {
-            try stdout.print("{s} {} {s}", .{ token.token, token.type, query_parse_tree.operator });
+            try stdout.print("{s} {} {s}", .{ token.token, token.type, query_parse_tree.operator});
         }
 
         try stdout.print("\n", .{});
