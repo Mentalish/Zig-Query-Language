@@ -5,7 +5,7 @@ pub const ParseTreeNode = struct {
     operator: []const u8,
     type_code: typ.TokenType,
     parent: ?*ParseTreeNode = null,
-    children: ?[]*ParseTreeNode = &{},
+    children: ?[]*ParseTreeNode,
 };
 
 const StackItem = union(enum) {
@@ -31,15 +31,15 @@ const StateDictionary = struct { state: []State, num_states: usize };
 const State = struct { sub_states: std.StringHashMap([]const u8) };
 
 pub fn create_parse_tree(tokens: []typ.Token, allocator: std.mem.Allocator) !*ParseTreeNode {
-    var node_stack: std.ArrayList(*ParseTreeNode) = {};
+    var node_stack: std.ArrayList(*ParseTreeNode) = .empty;
 
-    node_stack.append(try create_node(tokens[0], allocator));
+    try node_stack.append(allocator, try create_node(tokens[0], allocator));
     var i: usize = 1;
     var j: usize = 0;
     var current_state: usize = 0;
     while (i < tokens.len) {
         const action_code: typ.TokenType = try get_action_code(node_stack);
-        const action: SubState = state_dictionary[current_state][action_code];
+        const action: SubState = state_dictionary[current_state][@intFromEnum(action_code)];
 
         const opcode = action.action;
         const action_count = action.action_count;
@@ -47,26 +47,30 @@ pub fn create_parse_tree(tokens: []typ.Token, allocator: std.mem.Allocator) !*Pa
         switch (opcode) {
             .push => {
                 while (i < action_count) : (i += 1) {
-                    node_stack.append(create_node(tokens[i], allocator));
+                    try node_stack.append(allocator, try create_node(tokens[i], allocator));
                 }
             },
             .reduce => {
-                var popped_nodes: []*ParseTreeNode = {};
+                var popped_nodes: std.ArrayList(*ParseTreeNode) = .empty;
+                defer popped_nodes.deinit(allocator);
                 while (j < action_count) : (j += 1) {
-                    popped_nodes[j] = node_stack.pop();
+                    try popped_nodes.append(allocator, node_stack.pop().?);
                 }
                 j = 0;
 
-                const parent_index: usize = popped_nodes.len / 2;
+                const parent_index: usize = popped_nodes.items.len / 2;
 
-                reduce_tree(popped_nodes[parent_index], popped_nodes[0..parent_index], popped_nodes[(parent_index + 1)..popped_nodes.len]);
-                node_stack.appendAssumeCapacity(popped_nodes[parent_index]);
+                try reduce_tree(popped_nodes.items[parent_index], popped_nodes.items[0..parent_index], popped_nodes.items[(parent_index + 1)..popped_nodes.items.len], allocator);
+                node_stack.appendAssumeCapacity(popped_nodes.items[parent_index]);
             },
             .eof => break,
             .@"error" => return error.Invalid_Token,
-            else => unreachable,
         }
     }
+
+    //reduce all
+    
+    return node_stack.items[0];
 }
 
 fn create_node(tokens: typ.Token, allocator: std.mem.Allocator) !*ParseTreeNode {
@@ -76,15 +80,26 @@ fn create_node(tokens: typ.Token, allocator: std.mem.Allocator) !*ParseTreeNode 
     return node;
 }
 
-fn get_action_code(stack: std.ArrayList(ParseTreeNode)) ?ActionCode {
-    if (stack.len != 0) {
-        return stack[stack.len - 1].type_code;
+fn get_action_code(stack: std.ArrayList(*ParseTreeNode)) !typ.TokenType {
+    if (stack.items.len != 0) {
+        return stack.items[stack.items.len - 1].type_code;
+    }
+
+    return error.NoType;
+}
+
+fn reduce_tree(parent: *ParseTreeNode, left_children: []*ParseTreeNode, right_children: []*ParseTreeNode, allocator: std.mem.Allocator) !void {
+    parent.children = try allocator.alloc(*ParseTreeNode, left_children.len + right_children.len);
+    for (left_children, 0..left_children.len) |child, i| {
+        parent.children.?[i] = child;
+    }
+
+    for (right_children, left_children.len..right_children.len) |child, j| {
+        parent.children.?[j] = child;
     }
 }
 
-fn reduce_tree(parent: *ParseTreeNode, left_children: []*ParseTreeNode, right_children: []*ParseTreeNode) !void {}
-
-const state_dictionary = [_]?[]const SubState{
+const state_dictionary = [_][]const SubState{
     state_0: {
         var tmp_row = [_]SubState{.{ .next_state = 999, .action = ActionCode.@"error", .action_count = 0 }} **
             @typeInfo(typ.TokenType).@"enum".fields.len;
