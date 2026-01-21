@@ -107,7 +107,8 @@ const state_dictionary = [_][]const SubState{
             @typeInfo(typ.TokenType).@"enum".fields.len;
         //put fields here
         tmp_row[@intFromEnum(typ.TokenType.select)] = .{ .next_state = 1, .action = ActionCode.push, .action_count = 1 };
-        tmp_row[@intFromEnum(typ.TokenType.where)] = .{ .next_state = 4, .action = ActionCode.push, .action_count = 0 };
+        tmp_row[@intFromEnum(typ.TokenType.where)] = .{ .next_state = 4, .action = ActionCode.push, .action_count = 1 };
+        tmp_row[@intFromEnum(typ.TokenType.eof)] = .{ .next_state = 999, .action = ActionCode.eof, .action_count = 1 };
         const final = tmp_row;
         break :state_0 &final;
     },
@@ -123,7 +124,7 @@ const state_dictionary = [_][]const SubState{
         var tmp_row = [_]SubState{.{ .next_state = 999, .action = ActionCode.@"error", .action_count = 0 }} **
             @typeInfo(typ.TokenType).@"enum".fields.len;
         //put fields here
-        tmp_row[@intFromEnum(typ.TokenType.separator)] = .{ .next_state = 2, .action = ActionCode.push, .action_count = 1 };
+        tmp_row[@intFromEnum(typ.TokenType.separator)] = .{ .next_state = 1, .action = ActionCode.push, .action_count = 1 };
         tmp_row[@intFromEnum(typ.TokenType.from)] = .{ .next_state = 3, .action = ActionCode.push, .action_count = 1 };
         const final = tmp_row;
         break :state_2 &final;
