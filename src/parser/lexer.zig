@@ -28,7 +28,7 @@ pub fn cmd_lexer(buffer: []const u8, allocator: std.mem.Allocator) ![]Token {
     for (buffer) |char| {
         if (char == ',' or char == ';') {
             //flush current token
-            const prev_token_text = curr_token.toOwnedSlice(allocator);
+            const prev_token_text = try curr_token.toOwnedSlice(allocator);
             try tokens.append(allocator, .{.token = prev_token_text, .type = get_type(prev_token_text)});
             //get and append separator
             try curr_token.append(allocator, char);
