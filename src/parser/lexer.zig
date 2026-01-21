@@ -5,15 +5,20 @@ pub const Token = struct {
     type: TokenType,
 };
 
+//note: make sure all commands are at the begining of the enum and make sure they match the default_commands array
 pub const TokenType = enum {
-    command,
+    select,
+    from,
+    when,
+    join,
+    separator,
     numerical,
     name,
     operand,
     eof,
 };
 
-const default_commands = [_][]const u8{"SELECT"};
+const default_commands = [_][]const u8{"SELECT", "FROM", "WHEN", "JOIN"};
 const operands = [_][]const u8{ "+", "-", "/", "*", ">", "<" };
 
 pub fn cmd_lexer(buffer: []const u8, allocator: std.mem.Allocator) ![]Token {
@@ -50,9 +55,10 @@ pub fn cmd_lexer(buffer: []const u8, allocator: std.mem.Allocator) ![]Token {
 }
 
 fn get_type(token: []const u8) TokenType {
-    for (default_commands) |command| {
+    for (default_commands, 0..default_commands.len) |command, i| {
         if (std.mem.eql(u8, token, command)) {
-            return TokenType.command;
+            const tok_type: TokenType = @enumFromInt(i);
+            return tok_type;
         }
     }
     for (operands) |operand| {
