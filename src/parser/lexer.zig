@@ -9,7 +9,7 @@ pub const Token = struct {
 pub const TokenType = enum {
     select,
     from,
-    when,
+    where,
     join,
     separator,
     numerical,
@@ -18,7 +18,7 @@ pub const TokenType = enum {
     eof,
 };
 
-const default_commands = [_][]const u8{"SELECT", "FROM", "WHEN", "JOIN"};
+const default_commands = [_][]const u8{ "SELECT", "FROM", "WHERE", "JOIN" };
 const operands = [_][]const u8{ "+", "-", "/", "*", ">", "<" };
 
 pub fn cmd_lexer(buffer: []const u8, allocator: std.mem.Allocator) ![]Token {
@@ -26,21 +26,21 @@ pub fn cmd_lexer(buffer: []const u8, allocator: std.mem.Allocator) ![]Token {
     var curr_token: std.ArrayList(u8) = .empty;
 
     for (buffer) |char| {
-        if (char == ',' or char == ';') {
-            //flush current token
-            const prev_token_text = try curr_token.toOwnedSlice(allocator);
-            try tokens.append(allocator, .{.token = prev_token_text, .type = get_type(prev_token_text)});
-            //get and append separator
-            try curr_token.append(allocator, char);
-            const token_text = try curr_token.toOwnedSlice(allocator);
-            try tokens.append(allocator, .{ .token = token_text, .type = get_type(token_text) });
-            if (char == ';') {
-                break;
-            }
-        }
         if (char != ' ' and char != '\n') {
+            if (char == ',' or char == ';') {
+                //flush current token
+                const prev_token_text = try curr_token.toOwnedSlice(allocator);
+                try curr_token.append(allocator, char);
+
+                if (prev_token_text.len != 0) {
+                    try tokens.append(allocator, .{ .token = prev_token_text, .type = get_type(prev_token_text) });
+                }
+                if (char == ';') {
+                    break;
+                }
+            }
             try curr_token.append(allocator, char);
-        } else {
+        } else if (curr_token.items.len != 0) {
             const token_text = try curr_token.toOwnedSlice(allocator);
             try tokens.append(allocator, .{ .token = token_text, .type = get_type(token_text) });
         }
@@ -70,7 +70,9 @@ fn get_type(token: []const u8) TokenType {
     if (std.ascii.isDigit(token[0])) {
         return TokenType.numerical;
     }
-
+    if (token[0] == ',') {
+        return TokenType.separator;
+    }
     if (token[0] == ';') {
         return TokenType.eof;
     }

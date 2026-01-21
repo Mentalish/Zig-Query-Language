@@ -25,14 +25,28 @@ pub fn main() !void {
         defer arena_allocator.deinit();
 
         const tokens: []zql.lexer.Token = zql.lexer.cmd_lexer(buffer, arena_allocator.allocator()) catch continue;
-        const query_parse_tree: *zql.parse.ParseTreeNode = zql.parse.create_parse_tree(tokens, arena_allocator.allocator()) catch {
-            try stdout.print("Invalid Query\n", .{});
-            try stdout.flush();
-            continue;
-        };
+
         for (tokens) |token| {
-            try stdout.print("{s} {} {s}", .{ token.token, token.type, query_parse_tree.operator});
+            try stdout.print("{s} {} ", .{ token.token, token.type });
         }
+
+        try stdout.flush();
+
+        const query_parse_tree: *zql.parse.ParseTreeNode = zql.parse.create_parse_tree(tokens, arena_allocator.allocator()) catch |err|
+            switch (@as(anyerror, err)) {
+                error.InvalidToken => {
+                    try stdout.print("\nInvalid Query\n", .{});
+                    try stdout.flush();
+                    continue;
+                },
+                else => {
+                    try stdout.print("Invalid Memory allocation\n", .{});
+                    try stdout.flush();
+                    continue;
+                },
+            };
+
+        try stdout.print("\n{s}", .{query_parse_tree.operator});
 
         try stdout.print("\n", .{});
         try stdout.flush();
