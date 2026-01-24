@@ -32,11 +32,13 @@ const State = struct { sub_states: std.StringHashMap([]const u8) };
 pub fn create_parse_tree(tokens: []typ.Token, allocator: std.mem.Allocator) !*ParseTreeNode {
     var node_stack: std.ArrayList(*ParseTreeNode) = .empty;
 
-    try node_stack.append(allocator, try create_node(tokens[0], allocator));
-    var i: usize = 1;
+    var i: usize = 0;
     var j: usize = 0;
     var current_state: usize = 0;
     while (i < tokens.len) {
+        try node_stack.append(allocator, try create_node(tokens[i], allocator));
+        i += 1;
+
         const action_code: typ.TokenType = try get_action_code(node_stack);
         const action: SubState = state_dictionary[current_state][@intFromEnum(action_code)];
 
@@ -44,13 +46,7 @@ pub fn create_parse_tree(tokens: []typ.Token, allocator: std.mem.Allocator) !*Pa
         const action_count = action.action_count;
         current_state = action.next_state;
         switch (opcode) {
-            .push => {
-                while (j < action_count and i < tokens.len) : (j += 1) {
-                    try node_stack.append(allocator, try create_node(tokens[i], allocator));
-                    i += 1;
-                }
-                j = 0;
-            },
+            .push => {},
             .reduce => {
                 var popped_nodes: std.ArrayList(*ParseTreeNode) = .empty;
                 defer popped_nodes.deinit(allocator);
@@ -72,8 +68,6 @@ pub fn create_parse_tree(tokens: []typ.Token, allocator: std.mem.Allocator) !*Pa
             .@"error" => return error.Invalid_Token,
         }
     }
-
-    //reduce all
 
     return node_stack.items[0];
 }
@@ -127,7 +121,7 @@ const state_dictionary = [_][num_commands]SubState{
         var tmp_row = [_]SubState{.{ .next_state = 999, .action = ActionCode.@"error", .action_count = 0 }} **
             @typeInfo(typ.TokenType).@"enum".fields.len;
         //put fields here
-        tmp_row[@intFromEnum(typ.TokenType.name)] = .{ .next_state = 2, .action = ActionCode.push, .action_count = 1 };
+        tmp_row[@intFromEnum(typ.TokenType.name)] = .{ .next_state = 2, .action = ActionCode.reduce, .action_count = 2 };
         break :state_1 tmp_row;
     },
     state_2: {
@@ -142,7 +136,7 @@ const state_dictionary = [_][num_commands]SubState{
         var tmp_row = [_]SubState{.{ .next_state = 999, .action = ActionCode.@"error", .action_count = 0 }} **
             @typeInfo(typ.TokenType).@"enum".fields.len;
         //put fields here
-        tmp_row[@intFromEnum(typ.TokenType.name)] = .{ .next_state = 0, .action = ActionCode.push, .action_count = 1 };
+        tmp_row[@intFromEnum(typ.TokenType.name)] = .{ .next_state = 0, .action = ActionCode.reduce, .action_count = 2 };
         break :state_3 tmp_row;
     },
     state_4: {
