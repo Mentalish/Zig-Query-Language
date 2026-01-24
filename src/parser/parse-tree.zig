@@ -4,7 +4,6 @@ const typ = @import("lexer.zig");
 pub const ParseTreeNode = struct {
     operator: []const u8,
     type_code: typ.TokenType,
-    parent: ?*ParseTreeNode = null,
     children: ?[]*ParseTreeNode,
 };
 
@@ -55,14 +54,14 @@ pub fn create_parse_tree(tokens: []typ.Token, allocator: std.mem.Allocator) !*Pa
             .reduce => {
                 var popped_nodes: std.ArrayList(*ParseTreeNode) = .empty;
                 defer popped_nodes.deinit(allocator);
-                while (j < action_count) : (j += 1) {
+                while (j < action_count and j < node_stack.items.len) : (j += 1) {
                     try popped_nodes.append(allocator, node_stack.pop().?);
                 }
                 j = 0;
 
                 const parent_index: usize = popped_nodes.items.len / 2;
-                if (parent_index != 0 and parent_index != 1) {
-                    try reduce_tree(popped_nodes.items[parent_index], popped_nodes.items[0..parent_index], popped_nodes.items[(parent_index)..popped_nodes.items.len], allocator);
+                if (parent_index != 0 and parent_index != popped_nodes.items.len) {
+                    try reduce_tree(popped_nodes.items[parent_index], popped_nodes.items[0..parent_index], popped_nodes.items[(parent_index + 1)..], allocator);
                 } else {
                     try reduce_tree(popped_nodes.items[parent_index], popped_nodes.items[0..parent_index], null, allocator);
                 }
@@ -94,28 +93,22 @@ fn get_action_code(stack: std.ArrayList(*ParseTreeNode)) !typ.TokenType {
     return error.NoType;
 }
 
-fn reduce_tree(parent: *ParseTreeNode, left_children: []*ParseTreeNode, right_children: ?[]*ParseTreeNode, allocator: std.mem.Allocator) !void {
+fn reduce_tree(parent: *ParseTreeNode, left_children: ?[]*ParseTreeNode, right_children: ?[]*ParseTreeNode, allocator: std.mem.Allocator) !void {
     var new_children: std.ArrayList(*ParseTreeNode) = .empty;
 
-    if(parent.children) |children| {
-        for (children) |child|{
-            try new_children.append(allocator, child);
-        }
+    if (parent.children) |children| {
+        try new_children.appendSlice(allocator, children);
     }
 
     if (left_children) |children| {
-        for (children) |child| {
-            try new_children.append(allocator, child);
-        }
+        try new_children.appendSlice(allocator, children);
     }
 
     if (right_children) |children| {
-        for (children) |child| {
-            try new_children.append(allocator, child);
-        }
+        try new_children.appendSlice(allocator, children);
     }
 
-    parent.children = new_children.toOwnedSlice(allocator);
+    parent.children = try new_children.toOwnedSlice(allocator);
 }
 
 const num_commands = @typeInfo(typ.TokenType).@"enum".fields.len;
