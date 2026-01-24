@@ -7,11 +7,6 @@ pub const ParseTreeNode = struct {
     children: ?[]*ParseTreeNode,
 };
 
-const StackItem = union(enum) {
-    tree: ?*ParseTreeNode,
-    string: ?[]const u8,
-};
-
 pub const SubState = struct {
     next_state: usize,
     action: ActionCode,
