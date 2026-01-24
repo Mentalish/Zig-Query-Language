@@ -61,8 +61,12 @@ pub fn create_parse_tree(tokens: []typ.Token, allocator: std.mem.Allocator) !*Pa
                 j = 0;
 
                 const parent_index: usize = popped_nodes.items.len / 2;
+                if (parent_index != 0 and parent_index != 1) {
+                    try reduce_tree(popped_nodes.items[parent_index], popped_nodes.items[0..parent_index], popped_nodes.items[(parent_index)..popped_nodes.items.len], allocator);
+                } else {
+                    try reduce_tree(popped_nodes.items[parent_index], popped_nodes.items[0..parent_index], null, allocator);
+                }
 
-                try reduce_tree(popped_nodes.items[parent_index], popped_nodes.items[0..parent_index], popped_nodes.items[(parent_index + 1)..popped_nodes.items.len], allocator);
                 try node_stack.append(allocator, popped_nodes.items[parent_index]);
             },
             .eof => break,
@@ -90,15 +94,28 @@ fn get_action_code(stack: std.ArrayList(*ParseTreeNode)) !typ.TokenType {
     return error.NoType;
 }
 
-fn reduce_tree(parent: *ParseTreeNode, left_children: []*ParseTreeNode, right_children: []*ParseTreeNode, allocator: std.mem.Allocator) !void {
-    parent.children = try allocator.alloc(*[]ParseTreeNode, left_children.len + right_children.len);
-    for (left_children, 0..left_children.len) |child, i| {
-        parent.children.?[i] = child;
+fn reduce_tree(parent: *ParseTreeNode, left_children: []*ParseTreeNode, right_children: ?[]*ParseTreeNode, allocator: std.mem.Allocator) !void {
+    var new_children: std.ArrayList(*ParseTreeNode) = .empty;
+
+    if(parent.children) |children| {
+        for (children) |child|{
+            try new_children.append(allocator, child);
+        }
     }
 
-    for (right_children, left_children.len..right_children.len) |child, j| {
-        parent.children.?[j] = child;
+    if (left_children) |children| {
+        for (children) |child| {
+            try new_children.append(allocator, child);
+        }
     }
+
+    if (right_children) |children| {
+        for (children) |child| {
+            try new_children.append(allocator, child);
+        }
+    }
+
+    parent.children = new_children.toOwnedSlice(allocator);
 }
 
 const num_commands = @typeInfo(typ.TokenType).@"enum".fields.len;
@@ -118,7 +135,6 @@ const state_dictionary = [_][num_commands]SubState{
             @typeInfo(typ.TokenType).@"enum".fields.len;
         //put fields here
         tmp_row[@intFromEnum(typ.TokenType.name)] = .{ .next_state = 2, .action = ActionCode.push, .action_count = 1 };
-
         break :state_1 tmp_row;
     },
     state_2: {
@@ -127,7 +143,6 @@ const state_dictionary = [_][num_commands]SubState{
         //put fields here
         tmp_row[@intFromEnum(typ.TokenType.separator)] = .{ .next_state = 1, .action = ActionCode.push, .action_count = 1 };
         tmp_row[@intFromEnum(typ.TokenType.from)] = .{ .next_state = 3, .action = ActionCode.push, .action_count = 1 };
-
         break :state_2 tmp_row;
     },
     state_3: {
@@ -135,7 +150,6 @@ const state_dictionary = [_][num_commands]SubState{
             @typeInfo(typ.TokenType).@"enum".fields.len;
         //put fields here
         tmp_row[@intFromEnum(typ.TokenType.name)] = .{ .next_state = 0, .action = ActionCode.push, .action_count = 1 };
-
         break :state_3 tmp_row;
     },
     state_4: {
@@ -143,7 +157,6 @@ const state_dictionary = [_][num_commands]SubState{
             @typeInfo(typ.TokenType).@"enum".fields.len;
         //put fields here
         tmp_row[@intFromEnum(typ.TokenType.numerical)] = .{ .next_state = 5, .action = ActionCode.push, .action_count = 1 };
-
         break :state_4 tmp_row;
     },
     state_5: {
@@ -152,7 +165,6 @@ const state_dictionary = [_][num_commands]SubState{
         //put fields here
         tmp_row[@intFromEnum(typ.TokenType.operand)] = .{ .next_state = 4, .action = ActionCode.push, .action_count = 1 };
         tmp_row[@intFromEnum(typ.TokenType.eof)] = .{ .next_state = 999, .action = ActionCode.eof, .action_count = 1 };
-
         break :state_5 tmp_row;
     },
 };
