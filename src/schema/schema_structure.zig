@@ -1,3 +1,10 @@
+const std = @import("std");
+
+const Database = struct {
+    name: []const u8,
+    schemas: std.StringHashMap(*Schema),
+};
+
 const Schema = struct {
     name: []const u8,
     tables: *[]TableSchema,
@@ -5,7 +12,7 @@ const Schema = struct {
 
 const TableSchema = struct {
     name: []const u8,
-    items: Data,
+    items: *[]Data,
     foreign_keys: ?[][]const u8 = null,
 };
 
