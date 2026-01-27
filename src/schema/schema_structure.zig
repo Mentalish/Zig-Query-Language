@@ -7,12 +7,12 @@ const Database = struct {
 
 const Schema = struct {
     name: []const u8,
-    tables: *[]TableSchema,
+    tables: std.StringHashMap(*TableSchema),
 };
 
 const TableSchema = struct {
     name: []const u8,
-    items: *[]Data,
+    items: std.StringHashMap(*Data),
     foreign_keys: ?[][]const u8 = null,
 };
 
