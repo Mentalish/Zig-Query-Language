@@ -24,7 +24,7 @@ const StateDictionary = struct { state: []State, num_states: usize };
 
 const State = struct { sub_states: std.StringHashMap([]const u8) };
 
-pub fn create_parse_tree(tokens: []typ.Token, allocator: std.mem.Allocator) !*ParseTreeNode {
+pub fn create_parse_tree(tokens: []typ.Token, allocator: std.mem.Allocator) error{ InvalidToken, InvalidReduction, InvalidPop, OutOfMemory }!*ParseTreeNode {
     var node_stack: std.ArrayList(*ParseTreeNode) = .empty;
 
     var i: usize = 0;
@@ -34,7 +34,7 @@ pub fn create_parse_tree(tokens: []typ.Token, allocator: std.mem.Allocator) !*Pa
         try node_stack.append(allocator, try create_node(tokens[i], allocator));
         i += 1;
 
-        const action_code: typ.TokenType = try get_action_code(node_stack);
+        const action_code: typ.TokenType = get_action_code(node_stack) orelse typ.TokenType.eof;
         const action: SubState = state_dictionary[current_state][@intFromEnum(action_code)];
 
         const opcode = action.action;
@@ -46,21 +46,21 @@ pub fn create_parse_tree(tokens: []typ.Token, allocator: std.mem.Allocator) !*Pa
                 var popped_nodes: std.ArrayList(*ParseTreeNode) = .empty;
                 defer popped_nodes.deinit(allocator);
                 while (j < action_count and j < node_stack.items.len) : (j += 1) {
-                    try popped_nodes.append(allocator, node_stack.pop().?);
+                    popped_nodes.append(allocator, node_stack.pop().?) catch return error.InvalidPop;
                 }
                 j = 0;
 
                 const parent_index: usize = popped_nodes.items.len / 2;
                 if (parent_index != 0 and parent_index != popped_nodes.items.len) {
-                    try reduce_tree(popped_nodes.items[parent_index], popped_nodes.items[0..parent_index], popped_nodes.items[(parent_index + 1)..], allocator);
+                    reduce_tree(popped_nodes.items[parent_index], popped_nodes.items[0..parent_index], popped_nodes.items[(parent_index + 1)..], allocator) catch return error.InvalidReduction;
                 } else {
-                    try reduce_tree(popped_nodes.items[parent_index], popped_nodes.items[0..parent_index], null, allocator);
+                    reduce_tree(popped_nodes.items[parent_index], popped_nodes.items[0..parent_index], null, allocator) catch return error.InvalidReduction;
                 }
 
                 try node_stack.append(allocator, popped_nodes.items[parent_index]);
             },
             .eof => break,
-            .@"error" => return error.Invalid_Token,
+            .@"error" => return error.InvalidToken,
         }
     }
 
@@ -74,12 +74,12 @@ fn create_node(tokens: typ.Token, allocator: std.mem.Allocator) !*ParseTreeNode 
     return node;
 }
 
-fn get_action_code(stack: std.ArrayList(*ParseTreeNode)) !typ.TokenType {
+fn get_action_code(stack: std.ArrayList(*ParseTreeNode)) ?typ.TokenType {
     if (stack.items.len != 0) {
         return stack.items[stack.items.len - 1].type_code;
     }
 
-    return error.NoType;
+    return null;
 }
 
 fn reduce_tree(parent: *ParseTreeNode, left_children: ?[]*ParseTreeNode, right_children: ?[]*ParseTreeNode, allocator: std.mem.Allocator) !void {
