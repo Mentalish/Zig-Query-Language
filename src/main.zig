@@ -34,8 +34,18 @@ pub fn main() !void {
 
         const query_parse_tree: *zql.parse.ParseTreeNode = zql.parse.create_parse_tree(tokens, arena_allocator.allocator()) catch |err|
             switch (@as(anyerror, err)) {
-                error.Invalid_Token => {
+                error.InvalidToken => {
                     try stdout.print("\nInvalid Query\n", .{});
+                    try stdout.flush();
+                    continue;
+                },
+                error.InvalidReduction => {
+                    try stdout.print("\nInvalid Reduction\n", .{});
+                    try stdout.flush();
+                    continue;
+                },
+                error.InvalidPop => {
+                    try stdout.print("\nInvalid Pop\n", .{});
                     try stdout.flush();
                     continue;
                 },
