@@ -2,7 +2,7 @@ const std = @import("std");
 
 const Database = struct {
     name: []const u8,
-    schemas: std.StringHashMap(*Schema),
+    schema: *Schema,
 };
 
 const Schema = struct {

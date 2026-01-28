@@ -1,17 +1,18 @@
 const std = @import("std");
 const schema_structure = @import("schema_structure.zig");
 
-pub fn create_schema(schema_name: []const u8, data_tables: *[]schema_structure.TableSchema, allcator: std.mem.Allocator) !*schema_structure.Schema {
-    var schema = allcator.create(schema_structure.schema);
+pub fn create_schema(db_schema: *schema_structure.Schema, schema_name: []const u8, data_tables: *[]schema_structure.TableSchema, allcator: std.mem.Allocator) !*schema_structure.Schema {
+    db_schema.tables = std.StringHashMap(*schema_structure.TableSchema).init(allcator);
 
-    schema.name = schema_name;
-    schema.tables = data_tables;
-
-    return schema;
+    db_schema.name = schema_name;
+    
+    for (data_tables) |table| {
+        try db_schema.tables.put(table.name, table);
+    }
 }
 
-fn create_table_schema(name: [][]const u8, items: *[]schema_structure.Data ,foregin_keys: ?[][]const u8, allocator: std.mem.Allocator) !*[]schema_structure.TableSchema {
-    var table_schema = allocator.create(schema_structure.TableSchema);
+fn create_table_schema(table_schema: *schema_structure.TableSchema, name: [][]const u8, items: *[]schema_structure.Data ,foregin_keys: ?[][]const u8, allocator: std.mem.Allocator) !void {
+    table_schema.items = std.StringHashMap(*schema_structure.Data).init(allocator);
 
     table_schema.name = name;
 
@@ -19,9 +20,9 @@ fn create_table_schema(name: [][]const u8, items: *[]schema_structure.Data ,fore
         table_schema.foreign_keys = fk;
     }
 
-    table_schema.items = items;
-
-    return table_schema;
+    for(items) |item|{
+       try table_schema.items.put(item.name, item); 
+    }
 }
 
 fn create_data_entries(names: [][]const u8, types: []schema_structure.DataType, allocator: std.mem.Allocator) !*[]schema_structure.Data {
