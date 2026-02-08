@@ -45,13 +45,14 @@ pub fn create_parse_tree(tokens: []typ.Token, allocator: std.mem.Allocator) erro
             .reduce => {
                 var popped_nodes: std.ArrayList(*ParseTreeNode) = .empty;
                 defer popped_nodes.deinit(allocator);
-                while (j < action_count and j < node_stack.items.len) : (j += 1) {
+                while (j < action_count and j < node_stack.items.len and node_stack.items.len > 1) : (j += 1) {
                     popped_nodes.append(allocator, node_stack.pop().?) catch return error.InvalidPop;
                 }
                 j = 0;
 
                 const parent_index: usize = popped_nodes.items.len / 2;
-                if (parent_index != 0 and parent_index != popped_nodes.items.len) {
+                const max_index: usize = popped_nodes.items.len - 1;
+                if (parent_index != 0 and parent_index < max_index) {
                     reduce_tree(popped_nodes.items[parent_index], popped_nodes.items[0..parent_index], popped_nodes.items[(parent_index + 1)..], allocator) catch return error.InvalidReduction;
                 } else {
                     reduce_tree(popped_nodes.items[parent_index], popped_nodes.items[0..parent_index], null, allocator) catch return error.InvalidReduction;
@@ -71,6 +72,7 @@ fn create_node(tokens: typ.Token, allocator: std.mem.Allocator) !*ParseTreeNode 
     var node: *ParseTreeNode = try allocator.create(ParseTreeNode);
     node.operator = tokens.token;
     node.type_code = tokens.type;
+    node.children = null;
     return node;
 }
 
