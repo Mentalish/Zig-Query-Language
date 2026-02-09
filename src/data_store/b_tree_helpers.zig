@@ -13,7 +13,7 @@ pub fn findEntry(root: *schemastore.StoreTree, current_node: *schemastore.EntryN
             }
         }
     }
-    return;
+    return null;
 }
 
 fn binarySearch(node: *schemastore.EntryNode, target: usize) ?usize {
