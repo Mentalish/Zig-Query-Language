@@ -4,7 +4,7 @@ const schemastore = @import("store-tree-stuctures.zig");
 pub fn findEntry(root: *schemastore.StoreTree, current_node: *schemastore.EntryNode, target: usize) ?*schemastore.EntryNode {
     if (current_node.children) |children| {
         if (binarySearch(children, target)) |return_index| {
-            return current_node.children[return_index];
+            return children[return_index];
         }
 
         for (current_node.children) |child| {
