@@ -1,7 +1,7 @@
 const std = @import("std");
 const schemastore = @import("store-tree-stuctures.zig");
 
-pub fn findEntry(root: *schemastore.StoreTree, current_node: *schemastore.EntryNode, target_id: u64) ?*schemastore.EntryNode {
+pub fn findEntry(root: *schemastore.StoreTree, current_node: *schemastore.EntryNode, target_id: usize) ?*schemastore.EntryNode {
     if (current_node.children) |children| {
         if (binarySearch(children, target_id)) |return_index| {
             return children[return_index];
@@ -16,4 +16,23 @@ pub fn findEntry(root: *schemastore.StoreTree, current_node: *schemastore.EntryN
     return null;
 }
 
-fn binarySearch(node: *schemastore.EntryNode, target_id: u64) ?usize {}
+fn binarySearch(children: *[]schemastore.EntryNode, target_id: usize) ?usize {
+    var high = children.*.len - 1;
+    var low = 0;
+    var center: usize = (high - low) / 2;
+    while (center > 0 and center < children.*.len) {
+        if (target_id == children[center].*.primary_key) {
+            return center;
+        }
+
+        if (target_id < children[center].*.primary_key) {
+            high = center;
+        } else {
+            low = center;
+        }
+
+        center = (high - low) / 2;
+    }
+
+    return null;
+}
